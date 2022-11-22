@@ -14,20 +14,20 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use storage::*;
 
-pub struct AlphaZero {
+pub struct AlphaZero<G: Game> {
     config: Config,
-    network: Network,
+    network: Network<G>,
 }
 
-impl AlphaZero {
+impl<G: Game + Sync + 'static> AlphaZero<G> {
     pub fn empty(config: Config) -> Self {
         AlphaZero {
             config,
-            network: Network {},
+            network: Network::new(),
         }
     }
 
-    pub fn train<G: Game + 'static>(&mut self, terminator: Receiver<()>) {
+    pub fn train(&mut self, terminator: Receiver<()>) {
         let storage = Storage::create(self.network.clone());
         let (tx, rx) = channel::<G>();
         for i in 0..self.config.actor_count {
@@ -49,7 +49,7 @@ impl AlphaZero {
     }
 }
 
-fn generate_self_play<G: Game>(config: Config, storage: Storage, tx: Sender<G>) {
+fn generate_self_play<G: Game>(config: Config, storage: Storage<G>, tx: Sender<G>) {
     let mut network = storage.latest_network();
     let mut current_network_index = 0;
     loop {
@@ -58,12 +58,12 @@ fn generate_self_play<G: Game>(config: Config, storage: Storage, tx: Sender<G>) 
             network = new_network;
             current_network_index = new_index;
         }
-        let game = play_game(config, &network);
+        let game = play_game::<G>(config, &network);
         tx.send(game);
     }
 }
 
-fn play_game<G: Game>(config: Config, network: &Network) -> G {
+fn play_game<G: Game>(config: Config, network: &Network<G>) -> G {
     let mut game = G::create(None);
     while !game.terminal() && game.len() < config.max_move_count {
         let (action, root) = mcts::run(config, &game, &network);

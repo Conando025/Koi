@@ -1,16 +1,17 @@
 use super::{Config, Game, Network, Node, NodeRef};
 use std::collections::HashMap;
 
-pub fn run<G: Game>(config: Config, game: &G, network: &Network) -> (G::Action, Node<G>) {
+pub fn run<G: Game>(config: Config, game: &G, network: &Network<G>) -> (G::Action, Node<G>) {
     let mut root = Node::new(0.0);
     let _ = evaluate(root, game, network);
     unimplemented!()
 }
 
-fn evaluate<G: Game>(node: NodeRef<G>, game: &G, network: &Network) -> f64 {
+fn evaluate<G: Game>(node_ref: NodeRef<G>, game: &G, network: &Network<G>) -> f64 {
     let (value, policy_logic_units): (f64, HashMap<G::Action, f64>) =
-        network.inference::<G>(game.make_image(None));
+        network.inference(game.make_image(None));
 
+    let mut node = (*node_ref).borrow_mut();
     node.to_play = game.to_play();
     let policy: HashMap<G::Action, f64> = game
         .legal_actions()
@@ -20,7 +21,7 @@ fn evaluate<G: Game>(node: NodeRef<G>, game: &G, network: &Network) -> f64 {
     let policy_sum = policy.iter().fold(0.0, |acc, (_, value)| acc + *value);
 
     for (action, p) in policy.into_iter() {
-        node.children.insert(action, Node::new(p / policy_sum))
+        node.children.insert(action, Node::new(p / policy_sum));
     }
 
     value
