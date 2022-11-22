@@ -27,12 +27,12 @@ impl AlphaZero {
         }
     }
 
-    pub fn train<G: Game>(&mut self, terminator: Receiver<()>) {
+    pub fn train<G: Game + 'static>(&mut self, terminator: Receiver<()>) {
         let storage = Storage::create(self.network.clone());
         let (tx, rx) = channel::<G>();
         for i in 0..self.config.actor_count {
-            let (config, storage, tx) = (self.config, storage.clone(), tx.clone());
-            spawn(|| generate_self_play::<G>(config, storage, tx));
+            let (config, storage, tx) = (self.config.clone() , storage.clone(), tx.clone());
+            spawn(move || generate_self_play::<G>(config, storage, tx));
         }
         drop(tx);
 
@@ -53,12 +53,12 @@ fn generate_self_play<G: Game>(config: Config, storage: Storage, tx: Sender<G>) 
     let mut network = storage.latest_network();
     let mut current_network_index = 0;
     loop {
-        if let (new_network, new_index) = storage.latest_network_cached(current_network_index) {
+        if let Some((new_network, new_index)) = storage.latest_network_cached(current_network_index) {
             network = new_network;
             current_network_index = new_index;
         }
         let game = play_game(config, &network);
-        tx.send(game)
+        tx.send(game);
     }
 }
 

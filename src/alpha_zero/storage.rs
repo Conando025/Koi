@@ -13,36 +13,38 @@ pub(crate) type Protected<T> = Arc<RwLock<T>>;
 impl Storage {
     pub fn create(network: Network) -> Self {
         Storage {
-            network_history: Arc::new(RwLock::new(
-                    network_history: vec![network]
-            )),
+            network_history: Arc::new(RwLock::new(vec![network])),
             latest: Arc::new(RwLock::new(0))
         }
     }
 
-    pub fn lock_network_list(self) -> RwLockWriteGuard<Vec<Network>>{
-        let Ok((mut network_history, mut latest)) = (self.network_history.write(), self.latest.write()) else {
+    pub fn lock_network_list(&self) -> RwLockWriteGuard<Vec<Network>> {
+        let (Ok(mut network_history), Ok(mut latest)) = (self.network_history.write(), self.latest.write()) else {
             panic!("Tried to read a broken Network history");
         };
-        latest += 1;
+        *latest += 1;
         network_history
     }
 
     pub fn latest_network(&self) -> Network {
-        let Ok(mut storage) = self._internal.read() else {
+        let (Ok(network_history), Ok(latest)) = (self.network_history.read(), self.latest.read()) else {
             panic!("Tried to read a broken Network history");
         };
-        storage.latest_network()
+        network_history[*latest].clone()
     }
 
     pub fn latest_network_cached(&self, current: usize) -> Option<(Network, usize)> {
-        let Ok(mut storage) = self._internal.read() else {
+        let Ok(latest) =  self.latest.read() else {
             panic!("Tried to read a broken Network history");
         };
-        if current == storage.latest {
+        if current == *latest {
             None
         } else {
-            Some((storage.latest_network(), storage.latest))
+            let Ok(network_history) = self.network_history.read() else {
+                panic!("Tried to read a broken Network history");
+            };
+
+            Some((network_history[*latest].clone(), *latest))
         }
     }
 }
