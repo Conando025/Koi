@@ -3,6 +3,7 @@ pub struct Config {
     pub(super) actor_count: usize,
     pub(super) move_samples: usize,
     pub(super) max_move_count: usize,
+    pub(super) number_of_simulations: usize,
     pub(super) dirichlet_alpha: f64, //0.3 for chess, 0.03 for Go and 0.15 for shogi.
     pub(super) exploration_fraction: f64,
     pub(super) c_base: usize, //for UCB formula

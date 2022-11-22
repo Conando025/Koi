@@ -24,11 +24,11 @@ impl<G: Game> Node<G> {
         }))
     }
 
-    fn expanded(&self) -> bool {
+    pub fn expanded(&self) -> bool {
         self.children.len() > 0
     }
 
-    fn value(&self) -> f64 {
+    pub fn value(&self) -> f64 {
         if self.visit_count == 0 {
             0.0
         } else {
