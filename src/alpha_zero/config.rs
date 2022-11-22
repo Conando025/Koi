@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Config {
     pub(super) actor_count: usize,
     pub(super) move_samples: usize,

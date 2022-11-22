@@ -4,6 +4,7 @@ mod node;
 mod game;
 mod network;
 mod storage;
+mod mcts;
 
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::spawn;
@@ -16,7 +17,6 @@ use storage::*;
 pub struct AlphaZero {
     config: Config,
     network: Network,
-    iteration: usize,
 }
 
 impl AlphaZero {
@@ -24,35 +24,24 @@ impl AlphaZero {
         AlphaZero {
             config,
             network: Network{},
-            iteration: 0,
         }
-    }
-
-    pub fn set_training_steps(&mut self, steps: usize) -> Result<(), Err()>{
-        if steps < self.iteration {
-            Err("You cant have less steps that already done!")
-        } else {
-            self.config.training_steps = steps;
-            Ok(())
-        }
-
     }
 
     pub fn train<G: Game>(&mut self, terminator: Receiver<()>) {
         let storage = Storage::create(self.network.clone());
-        let (tx, rx) = channel::<G::Action>();
+        let (tx, rx) = channel::<G>();
         for i in 0..self.config.actor_count {
-            let (config, storage, tx) = (self.config.clone(), storage.clone(), tx.clone());
+            let (config, storage, tx) = (self.config, storage.clone(), tx.clone());
             spawn(|| generate_self_play::<G>(config, storage, tx));
         }
         drop(tx);
 
-        let mut action_list = Vec::with_capacity(100);
-        for action in rx {
+        let mut game_buffer: Vec<G> = Vec::with_capacity(self.config.window_size);
+        for game in rx {
             if let Ok(_) = terminator.try_recv() {
                 break;
             }
-            action_list.push(action);
+            game_buffer.push(game);
         }
 
         let network = storage.latest_network();
@@ -60,6 +49,25 @@ impl AlphaZero {
     }
 }
 
-fn generate_self_play<G: Game>(config: Config, storage: Storage, tx: Sender<G::Action>) {
-    unimplemented!()
+fn generate_self_play<G: Game>(config: Config, storage: Storage, tx: Sender<G>) {
+    let mut network = storage.latest_network();
+    let mut current_network_index = 0;
+    loop {
+        if let (new_network, new_index) = storage.latest_network_cached(current_network_index) {
+            network = new_network;
+            current_network_index = new_index;
+        }
+        let game = play_game(config, &network);
+        tx.send(game)
+    }
+}
+
+fn play_game<G: Game>(config: Config, network: &Network) -> G {
+    let mut game = G::create(None);
+    while !game.terminal() && game.len() < config.max_move_count {
+        let (action, root) = mcts::run(config, &game, &network);
+        game.apply(action);
+        game.store_search_statistics(root);
+    }
+    game
 }
