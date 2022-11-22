@@ -1,43 +1,31 @@
 use std::borrow::BorrowMut;
-use std::sync::{RwLock, Arc};
+use std::sync::{RwLock, Arc, RwLockWriteGuard};
 use super::Network;
-
-struct InternalStorage {
-    network_history: Vec<Network>,
-    latest: usize,
-}
 
 #[derive(Clone)]
 pub struct Storage {
-    _internal: Protected<InternalStorage>
+    network_history: Protected<Vec<Network>>,
+    latest: Protected<usize>,
 }
 
 pub(crate) type Protected<T> = Arc<RwLock<T>>;
 
-impl InternalStorage {
-    pub fn latest_network(&self) -> Network {
-        self.network_history[self.latest].clone()
-    }
-}
-
 impl Storage {
     pub fn create(network: Network) -> Self {
         Storage {
-            _internal: Arc::new(RwLock::new(
-                InternalStorage {
-                    network_history: vec![network],
-                    latest: 0,
-                }
-            ))
+            network_history: Arc::new(RwLock::new(
+                    network_history: vec![network]
+            )),
+            latest: Arc::new(RwLock::new(0))
         }
     }
 
-    pub fn add_network(self, network: Network) {
-        let Ok(mut storage) = self._internal.write() else {
+    pub fn lock_network_list(self) -> RwLockWriteGuard<Vec<Network>>{
+        let Ok((mut network_history, mut latest)) = (self.network_history.write(), self.latest.write()) else {
             panic!("Tried to read a broken Network history");
         };
-        storage.network_history.push(network);
-        storage.latest += 1;
+        latest += 1;
+        network_history
     }
 
     pub fn latest_network(&self) -> Network {
