@@ -1,4 +1,4 @@
-struct Config {
+pub struct Config {
     actor_count: usize,
     move_samples: usize,
     max_move_count: usize,
