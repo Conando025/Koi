@@ -1,6 +1,6 @@
-use std::borrow::BorrowMut;
-use std::sync::{RwLock, Arc, RwLockWriteGuard};
 use super::Network;
+use std::borrow::BorrowMut;
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 #[derive(Clone)]
 pub struct Storage {
@@ -14,7 +14,7 @@ impl Storage {
     pub fn create(network: Network) -> Self {
         Storage {
             network_history: Arc::new(RwLock::new(vec![network])),
-            latest: Arc::new(RwLock::new(0))
+            latest: Arc::new(RwLock::new(0)),
         }
     }
 
@@ -48,4 +48,3 @@ impl Storage {
         }
     }
 }
-

@@ -1,12 +1,12 @@
 #![allow(unused)]
 mod config;
-mod node;
 mod game;
-mod network;
-mod storage;
 mod mcts;
+mod network;
+mod node;
+mod storage;
 
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use config::*;
 use node::*;
@@ -23,7 +23,7 @@ impl AlphaZero {
     pub fn empty(config: Config) -> Self {
         AlphaZero {
             config,
-            network: Network{},
+            network: Network {},
         }
     }
 
@@ -31,7 +31,7 @@ impl AlphaZero {
         let storage = Storage::create(self.network.clone());
         let (tx, rx) = channel::<G>();
         for i in 0..self.config.actor_count {
-            let (config, storage, tx) = (self.config.clone() , storage.clone(), tx.clone());
+            let (config, storage, tx) = (self.config.clone(), storage.clone(), tx.clone());
             spawn(move || generate_self_play::<G>(config, storage, tx));
         }
         drop(tx);

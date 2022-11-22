@@ -1,22 +1,26 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
+use super::{Game, game::Player};
 
-pub struct Node {
-    visit_count: usize,
-    to_play: f64,
-    prior: f64,
-    summed_value: f64,
-    children: Vec<Rc<RefCell<Node>>>,
+pub struct Node<G: Game> {
+    pub(super) visit_count: usize,
+    pub(super) to_play: Player,
+    pub(super) prior: f64,
+    pub(super) summed_value: f64,
+    pub(super) children: HashMap<G::Action, NodeRef<G>>,
 }
 
-impl Node {
-    pub fn empty(prior: f64) -> Self {
+type NodeRef<G> = Rc<RefCell<Node<G>>>;
+
+impl<G: Game> Node<G> {
+    pub fn empty(prior: f64) -> Node<G> {
         Node {
             visit_count: 0,
-            to_play: -1.0,
+            to_play: Player::A,
             prior,
             summed_value: 0.0,
-            children: Vec::new(),
+            children: HashMap::new(),
         }
     }
 
@@ -30,6 +34,5 @@ impl Node {
         } else {
             self.summed_value / (self.visit_count as f64)
         }
-
     }
 }
