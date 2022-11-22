@@ -66,7 +66,9 @@ fn generate_self_play<G: Game>(config: Config, storage: Storage<G>, tx: Sender<G
 fn play_game<G: Game>(config: Config, network: &Network<G>) -> G {
     let mut game = G::create(None);
     while !game.terminal() && game.len() < config.max_move_count {
-        let (action, root) = mcts::run(config, &game, &network);
+        let (Some(action), root) = mcts::run(config, &game, &network) else {
+            break
+        };
         game.apply(action);
         game.store_search_statistics(root);
     }

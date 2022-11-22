@@ -1,8 +1,9 @@
 use super::Node;
 use std::hash::Hash;
+use crate::alpha_zero::node::NodeRef;
 
 pub trait Game: Clone + Send {
-    type Action: Hash + Eq;
+    type Action: Hash + Eq + Copy;
     type Representation;
     type Image;
     fn create(history: Option<Vec<Self::Action>>) -> Self;
@@ -13,10 +14,11 @@ pub trait Game: Clone + Send {
     fn make_target(&self) -> Self::Representation;
     fn to_play(&self) -> Player;
     fn len(&self) -> usize;
-    fn store_search_statistics(&mut self, root: Node<Self>);
+    fn store_search_statistics(&mut self, root: NodeRef<Self>);
     fn make_image(&self, index: Option<usize>) -> Self::Image;
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Player {
     A,
     B,
