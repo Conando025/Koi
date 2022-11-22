@@ -11,17 +11,17 @@ pub struct Node<G: Game> {
     pub(super) children: HashMap<G::Action, NodeRef<G>>,
 }
 
-type NodeRef<G> = Rc<RefCell<Node<G>>>;
+pub type NodeRef<G> = Rc<RefCell<Node<G>>>;
 
 impl<G: Game> Node<G> {
-    pub fn empty(prior: f64) -> Node<G> {
-        Node {
+    pub fn new(prior: f64) -> NodeRef<G> {
+        Rc::new(RefCell::new(Node {
             visit_count: 0,
             to_play: Player::A,
             prior,
             summed_value: 0.0,
             children: HashMap::new(),
-        }
+        }))
     }
 
     fn expanded(&self) -> bool {
