@@ -10,7 +10,7 @@ pub struct Node {
 }
 
 impl Node {
-    fn empty(prior: f64) -> Self {
+    pub fn empty(prior: f64) -> Self {
         Node {
             visit_count: 0,
             to_play: -1.0,
@@ -28,7 +28,7 @@ impl Node {
         if self.visit_count == 0 {
             0.0
         } else {
-            self.summed_value / self.visit_count
+            self.summed_value / (self.visit_count as f64)
         }
 
     }
