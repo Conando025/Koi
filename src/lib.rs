@@ -1,4 +1,4 @@
-extern crate tensorflow;
 extern crate core;
+extern crate tensorflow;
 
 mod alpha_zero;

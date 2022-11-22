@@ -1,7 +1,7 @@
+use super::{game::Player, Game};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use super::{Game, game::Player};
 
 pub struct Node<G: Game> {
     pub(super) visit_count: usize,

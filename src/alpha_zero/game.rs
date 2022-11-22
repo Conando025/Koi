@@ -1,5 +1,5 @@
-use std::hash::Hash;
 use super::Node;
+use std::hash::Hash;
 
 pub trait Game: Clone + Send {
     type Action: Hash + Eq;

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::{Config, Game};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Network {}

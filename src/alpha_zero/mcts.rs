@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::{Config, Game, Network, Node};
+use std::collections::HashMap;
 
 pub fn run<G: Game>(config: Config, game: &G, network: &Network) -> (G::Action, Node<G>) {
     let mut root = Node::empty(0.0);
@@ -8,10 +8,12 @@ pub fn run<G: Game>(config: Config, game: &G, network: &Network) -> (G::Action, 
 }
 
 fn evaluate<G: Game>(node: &mut Node<G>, game: &G, network: &Network) -> f64 {
-    let (value, policy_logits): (f64, HashMap<G::Action, f64>) = network.inference::<G>(game.make_image(None));
+    let (value, policy_logits): (f64, HashMap<G::Action, f64>) =
+        network.inference::<G>(game.make_image(None));
 
     node.to_play = game.to_play();
-    let policy: HashMap<G::Action, f64> = game.legal_actions()
+    let policy: HashMap<G::Action, f64> = game
+        .legal_actions()
         .into_iter()
         .filter_map(|a| policy_logits.get(&a).map(|v| (a, *v)))
         .collect();

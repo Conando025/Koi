@@ -6,12 +6,12 @@ mod network;
 mod node;
 mod storage;
 
+use config::*;
+use game::*;
+use network::*;
+use node::*;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
-use config::*;
-use node::*;
-use network::*;
-use game::*;
 use storage::*;
 
 pub struct AlphaZero {
@@ -53,7 +53,8 @@ fn generate_self_play<G: Game>(config: Config, storage: Storage, tx: Sender<G>) 
     let mut network = storage.latest_network();
     let mut current_network_index = 0;
     loop {
-        if let Some((new_network, new_index)) = storage.latest_network_cached(current_network_index) {
+        if let Some((new_network, new_index)) = storage.latest_network_cached(current_network_index)
+        {
             network = new_network;
             current_network_index = new_index;
         }
