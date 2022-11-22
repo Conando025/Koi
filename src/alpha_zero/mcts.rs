@@ -1,4 +1,5 @@
 use super::{Config, Game, Network, Node, NodeRef};
+use rand_distr::{Distribution, Gamma};
 use std::collections::HashMap;
 
 pub fn run<G: Game>(config: Config, game: &G, network: &Network<G>) -> (G::Action, Node<G>) {
@@ -25,4 +26,15 @@ fn evaluate<G: Game>(node_ref: NodeRef<G>, game: &G, network: &Network<G>) -> f6
     }
 
     value
+}
+
+fn add_exploration_noise<G: Game>(node_ref: NodeRef<G>, config: Config) {
+    let mut node = (*node_ref).borrow_mut();
+    let frac = config.exploration_fraction;
+    let gamma = Gamma::new(config.dirichlet_alpha, 1.0).expect("The Config has a bad alpha");
+    let gamma = || gamma.sample(&mut rand::thread_rng());
+    for (_, mut child) in node.children.iter_mut() {
+        let prior = &mut (*child).borrow_mut().prior;
+        *prior = *prior * (1.0 - frac) + gamma() * frac;
+    }
 }
