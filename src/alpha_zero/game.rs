@@ -1,21 +1,23 @@
 use super::Node;
-use std::hash::Hash;
 use crate::alpha_zero::node::NodeRef;
+use std::hash::Hash;
+
+pub type Target = (i8, f64);
 
 pub trait Game: Clone + Send {
     type Action: Hash + Eq + Copy;
-    type Representation;
     type Image;
     fn create(history: Option<Vec<Self::Action>>) -> Self;
     fn terminal(&self) -> bool;
-    fn terminal_value(&self) -> f64;
+    fn terminal_value(&self) -> i8;
     fn legal_actions(&self) -> Vec<Self::Action>;
     fn apply(&mut self, action: Self::Action);
-    fn make_target(&self) -> Self::Representation;
+    fn make_target(&self, index: usize) -> Target;
     fn to_play(&self) -> Player;
     fn len(&self) -> usize;
     fn store_search_statistics(&mut self, root: NodeRef<Self>);
-    fn make_image(&self, index: Option<usize>) -> Self::Image;
+    fn make_image(&self, index: usize) -> Self::Image;
+    fn make_uniform_network() -> tensorflow::Graph;
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]

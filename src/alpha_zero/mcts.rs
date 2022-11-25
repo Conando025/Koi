@@ -1,11 +1,15 @@
-use std::cell::Ref;
 use super::{Config, Game, Network, Node, NodeRef};
 use crate::alpha_zero::game::Player;
 use rand_distr::{Distribution, Gamma};
+use std::cell::Ref;
 use std::collections::HashMap;
 use std::ops::Deref;
 
-pub fn run<G: Game>(config: Config, game: &G, network: &Network<G>) -> (Option<G::Action>, NodeRef<G>) {
+pub fn run<G: Game>(
+    config: Config,
+    game: &G,
+    network: &Network<G>,
+) -> (Option<G::Action>, NodeRef<G>) {
     let mut root = Node::new(0.0);
     let _ = evaluate(root.clone(), game, network);
     add_exploration_noise(root.clone(), config);
@@ -30,15 +34,15 @@ pub fn run<G: Game>(config: Config, game: &G, network: &Network<G>) -> (Option<G
 }
 
 fn evaluate<G: Game>(node_ref: NodeRef<G>, game: &G, network: &Network<G>) -> f64 {
-    let (value, policy_logic_units): (f64, HashMap<G::Action, f64>) =
-        network.inference(game.make_image(None));
+    let (value, policy_logits): (f64, HashMap<G::Action, f64>) =
+        network.inference(game.make_image(game.len() - 1));
 
     let mut node = (*node_ref).borrow_mut();
     node.to_play = game.to_play();
     let policy: HashMap<G::Action, f64> = game
         .legal_actions()
         .into_iter()
-        .filter_map(|a| policy_logic_units.get(&a).map(|v| (a, *v)))
+        .filter_map(|a| policy_logits.get(&a).map(|v| (a, *v)))
         .collect();
     let policy_sum = policy.iter().fold(0.0, |acc, (_, value)| acc + *value);
 
