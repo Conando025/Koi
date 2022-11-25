@@ -4,13 +4,13 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use tensorflow::{Graph, ImportGraphDefOptions, Session, SessionOptions};
 
-pub struct SharableNetwork<G: Game> {
+pub struct ShareableNetwork<G: Game> {
     _game: PhantomData<G>,
     graph: Graph,
 }
 
-impl<G: Game> SharableNetwork<G> {
-    pub fn new() -> SharableNetwork<G> {
+impl<G: Game> ShareableNetwork<G> {
+    pub fn new() -> ShareableNetwork<G> {
         let g = G::make_uniform_network();
         Self {
             _game: PhantomData::default(),
@@ -26,7 +26,7 @@ impl<G: Game> SharableNetwork<G> {
     }
 }
 
-impl<G: Game> Clone for SharableNetwork<G> {
+impl<G: Game> Clone for ShareableNetwork<G> {
     fn clone(&self) -> Self {
         let mut g = Graph::new();
         let graph_def = self.graph.graph_def().expect("Unable to serialize Graph");

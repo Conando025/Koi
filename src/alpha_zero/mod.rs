@@ -4,28 +4,29 @@ mod game;
 mod mcts;
 mod network;
 mod node;
+mod replay_buffer;
 mod storage;
 
 use config::*;
 use game::*;
 use network::*;
 use node::*;
-use rand::distributions::{Distribution, WeightedIndex};
-use rand::{thread_rng, Rng};
+use replay_buffer::*;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, RwLock};
 use std::thread::spawn;
 use storage::*;
 
 pub struct AlphaZero<G: Game> {
     config: Config,
-    network: SharableNetwork<G>,
+    network: ShareableNetwork<G>,
 }
 
 impl<G: Game + Sync + 'static> AlphaZero<G> {
     pub fn empty(config: Config) -> Self {
         AlphaZero {
             config,
-            network: SharableNetwork::new(),
+            network: ShareableNetwork::new(),
         }
     }
 
@@ -36,44 +37,42 @@ impl<G: Game + Sync + 'static> AlphaZero<G> {
             let tx = tx.clone();
             let storage = storage.clone();
             let config = self.config.clone();
-            spawn(move || {
-                Self::generate_self_play(config, storage.clone(), tx.clone())
-            });
+            spawn(move || Self::generate_self_play(config, storage.clone(), tx.clone()));
         }
         drop(tx);
 
-        let mut game_buffer: Vec<G> = Vec::with_capacity(self.config.window_size);
-        for game in rx {
-            if let Ok(_) = terminator.try_recv() {
-                break;
-            }
-            game_buffer.push(game);
-            if game_buffer.len() > self.config.batch_size {
-                let mut move_sum = 0;
-                let move_lengths = game_buffer.iter().map(|g| {
-                    move_sum += 1;
-                    g.len()
-                });
-                let mut dist = WeightedIndex::new(move_lengths).unwrap();
-                let mut target_data = Vec::with_capacity(self.config.batch_size);
-                let mut rng = thread_rng();
-                for _ in 0..self.config.batch_size {
-                    let g = &game_buffer[dist.sample(&mut rng)];
-                    let i = rng.gen_range(0..g.len());
-                    target_data.push((g.make_image(i), g.make_target(i)))
+        let game_buffer: Protected<ReplayBuffer<G>> =
+            Arc::new(RwLock::new(ReplayBuffer::new(self.config)));
+        let thread_game_buffer = game_buffer.clone();
+        spawn(move || {
+            const TINY_BUFFER_SIZE: usize = 10;
+            let mut tiny_buffer = Vec::with_capacity(TINY_BUFFER_SIZE);
+            for game in rx {
+                if let Ok(_) = terminator.try_recv() {
+                    break;
                 }
-                self.train_network(storage.clone(), target_data);
+                if tiny_buffer.len() < TINY_BUFFER_SIZE {
+                    tiny_buffer.push(game);
+                } else {
+                    let mut core = (*thread_game_buffer)
+                        .write()
+                        .expect("The buffer was poisened");
+                    (*core).save_games(&mut tiny_buffer);
+                    tiny_buffer = Vec::with_capacity(TINY_BUFFER_SIZE);
+                }
             }
-        }
+        });
 
-        self.network = storage.create_guard().get();
+        self.train_network(storage.clone(), game_buffer);
+
+        self.network = storage.latest_shareablenetwork();
     }
 
     fn generate_self_play(config: Config, storage: Storage<G>, tx: Sender<G>) {
         let mut index = 0;
         let mut network = storage.latest_network();
         loop {
-            if let Some((n,i)) = storage.latest_network_cached(index) {
+            if let Some((n, i)) = storage.latest_network_cached(index) {
                 index = i;
                 network = n;
             };
@@ -94,11 +93,18 @@ impl<G: Game + Sync + 'static> AlphaZero<G> {
         game
     }
 
-    fn train_network(&self, storage: Storage<G>, batch_data: Vec<(G::Image, Target)>) {
-        let guard = storage.create_guard();
-        let sharabke_network = guard.get();
-        let mut network = sharabke_network.to_network();
-        network.train(self.config);
-        guard.set(sharabke_network);
+    fn train_network(&self, storage: Storage<G>, replay_buffer: Protected<ReplayBuffer<G>>) {
+        let shareable_network = storage.latest_shareablenetwork();
+        let mut network = shareable_network.to_network();
+
+        for i in 0..self.config.training_steps {
+            if i % self.config.checkpoint_interval == 0 {
+                storage.add_new_network(shareable_network.clone());
+            }
+            let buffer = replay_buffer.read().expect("Buffer was poisened");
+            let _batch = (*buffer).sample_batch();
+            network.train(self.config);
+        }
+        storage.add_new_network(shareable_network);
     }
 }
