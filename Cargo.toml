@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tensorflow = {version = "0.19.1", tensorflow_unstable = true}
+tensorflow = {version = "0.19.1", features = ["tensorflow_gpu", "tensorflow_unstable"]}
 rand = {version = "0.8.5", alloc=true}
 rand_distr = "0.4.3"

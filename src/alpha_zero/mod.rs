@@ -103,6 +103,7 @@ impl<G: Game + Sync + 'static> AlphaZero<G> {
             }
             let buffer = replay_buffer.read().expect("Buffer was poisened");
             let _batch = (*buffer).sample_batch();
+            todo!("Actually make the Network train");
             network.train(self.config);
         }
         storage.add_new_network(shareable_network);
